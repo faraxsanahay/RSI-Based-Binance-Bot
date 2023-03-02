@@ -1,0 +1,77 @@
+import time
+from binance.client import Client
+import ta
+import pandas as pd
+
+
+
+class FaraxsanTradingBot:
+    def __init__(self, api_key, api_secret, symbol='AGIXBUSD', interval=Client.KLINE_INTERVAL_15MINUTE):
+        self.client = Client(api_key, api_secret)
+        self.symbol = symbol
+        self.interval = interval
+        self.bought = False
+        self.last_rsi = 0
+
+    def place_buy_order(self, amount):
+        try:
+            order = self.client.order_market_buy(
+                symbol=self.symbol,
+                quantity=amount
+            )
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Buy order placed for {amount} BUSD at price {order['fills'][0]['price']}")
+            return True
+        except Exception as e:
+            print(f"Failed to place buy order: {e}")
+            return False
+
+    def place_sell_order(self, amount):
+        try:
+            order = self.client.order_market_sell(
+                symbol=self.symbol,
+                quantity=amount
+            )
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Sell order placed for {amount} AGIX at price {order['fills'][0]['price']}")
+            return True
+        except Exception as e:
+            print(f"Failed to place sell order: {e}")
+            return False
+
+    def get_rsi(self):
+        klines = self.client.get_historical_klines(self.symbol, self.interval, "30 min ago UTC")
+        df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+        df = df.set_index('timestamp')
+        df.index = pd.to_datetime(df.index, unit='ms')
+        df = df[['open', 'high', 'low', 'close', 'volume']]
+        df['close'] = df['close'].astype(float)
+        rsi = ta.momentum.RSIIndicator(df['close'], window=14)
+        return rsi.rsi().iloc[-1]
+
+    def check_rsi(self):
+        rsi = self.get_rsi()
+
+        if rsi < 46 and not self.bought:
+            # Place a buy order for AGIX
+            amount = 20 / float(self.client.get_symbol_ticker(symbol=self.symbol)['price'])
+            self.place_buy_order(amount)
+            self.bought = True
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] RSI: {rsi:.2f}, bought {amount:.2f} AGIX")
+        elif rsi > 76 and self.bought:
+            # Place a sell order for the amount of AGIX bought
+            amount = float(self.client.get_asset_balance(asset='AGIX')['free'])
+            self.place_sell_order(amount)
+            self.bought = False
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] RSI: {rsi:.2f}, sold {amount:.2f} AGIX")
+
+        self.last_rsi = rsi
+
+    def run(self):
+        while True:
+            self.check_rsi()
+            # Print the current BUSD balance
+            balance = self.client.get_asset_balance(asset='BUSD')
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] BUSD balance: {balance['free']}")
+
+            # Sleep for 15 minutes before checking again
+            time.sleep(900)
+
