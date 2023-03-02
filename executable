@@ -1,0 +1,8 @@
+api_key = ''
+api_secret = ''
+
+# Instantiate the Binance trading bot
+bot = FaraxsanTradingBot(api_key, api_secret)
+
+# Run the bot
+bot.run()
