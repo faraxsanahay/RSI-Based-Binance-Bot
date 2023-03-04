@@ -6,6 +6,4 @@ If the RSI is below 46 and the bot has not already purchased AGIX, it calculates
 
 If the RSI is above 76 and the bot has already purchased AGIX, it calculates the amount of AGIX currently held and places a market sell order. The bot sets the "bought" flag to False to indicate that the asset has been sold.
 
-The bot continually checks the RSI and balance of the BUSD stablecoin in the user's account and prints the current status to the console.
-
-It's important to note that the code is written for educational purposes only and should not be used for actual trading without proper testing and validation. Cryptocurrency trading is risky, and the bot's performance may vary based on market conditions and other factors.
+The bot continually checks the RSI and balance of the BUSD  in the user's account and prints the current status to the console.
